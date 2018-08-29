@@ -28,6 +28,7 @@ nlst = []
 for i in os.listdir(vis_base):
      nlst.append(int(i[4:-4]))
 
+
 '''
 l25m: the list of 25 point test of each image shape(nimage, 25)
 l45mn: list 25 to 45 point test image number
@@ -83,6 +84,9 @@ class align():
                 l25.append((vis_g[60+j:60+j+240, 53:53+320] * ir_g).mean())
             self.l45m.append(l25[25:])
             lmax = np.array(l25).argmax()
+            linex = range(-5,40)
+        else:
+            linex = range(-5,20)
         self.logtemp.append(lmax)
         # subplot(223)
         vis_gnorm_crop = self.vis_gnorm[35+lmax:35+lmax+240, 53:53+320]
@@ -98,7 +102,7 @@ class align():
         ir_show.imshow(ir_img)
         # subplot(224)
         line.clear()
-        line.plot(l25)
+        line.plot(linex, l25)
         plt.draw()
         show_l = lnpixel / (lmax - 5)
         namebox.set_val("FLIR%d"%n)
@@ -145,11 +149,11 @@ pass_ax = plt.axes([0.81, 0.01, 0.09, 0.05])
 pass_button = widgets.Button(pass_ax, 'pass')
 pass_button.on_clicked(aligner.pass_click)
 
-not_pass_ax = plt.axes([0.71, 0.01, 0.03, 0.05])
+not_pass_ax = plt.axes([0.71, 0.01, 0.05, 0.03])
 not_pass_button = widgets.Button(not_pass_ax, 'not pass')
 not_pass_button.on_clicked(aligner.not_pass_click)
 
-change_value_ax = plt.axes([0.71, 0.05, 0.03, 0.05])
+change_value_ax = plt.axes([0.71, 0.05, 0.05, 0.03])
 change_value_button = widgets.Button(change_value_ax, 'change value')
 change_value_button.on_clicked(aligner.change_value_click)
 
