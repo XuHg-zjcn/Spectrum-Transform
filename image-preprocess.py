@@ -7,6 +7,7 @@ Created on Mon Aug 27 05:37:53 2018
 """
 import math
 import os
+import time
 import argparse
 import numpy as np
 from PIL import Image
@@ -17,6 +18,7 @@ from matplotlib import widgets
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--vis", help="visible image dir")
 parser.add_argument("-i", "--ir", help="IR image dir")
+parser.add_argument("-o", "--out", help="output file")
 args = parser.parse_args()
 
 vis_base=args.vis
@@ -36,18 +38,31 @@ l45m: shape(nimage, 20)
 logtemp: [RAWlargmax, 'str', yshift, xshift]
 '''
 class align():
-    def __init__(self):
+    def __init__(self, file):
+        timestruct = time.localtime()
+        strtime = time.strftime('%Y-%m-%d %H:%M:%S', timestruct)
+        self.outf = open(file, 'a')
+        self.outf.write('-----'+strtime+'-----\n')
         self.img_num = -1
         self.l25m = []
         self.l45mn = []
         self.l45m = []
-        self.logs = []
         self.logtemp = []
         self.yshiftNpix = None
+        self.xshiftNpix = 0
         
     def next_img(self):
         self.yshiftNpix = None
-        self.logs.append(self.logtemp)
+        self.xshiftNpix = 0
+        self.outf.write('FLIR%d'%(nlst[self.img_num]))
+        if len(self.logtemp) == 2:
+            self.outf.write(' %2d %8s\n'%tuple(self.logtemp))
+        elif len(self.logtemp) == 4:
+            self.outf.write(' %2d %8s %2d %2d\n'%tuple(self.logtemp))
+        elif len(self.logtemp) == 0:
+            pass
+        else:
+            raise ValueError('len logtemp not 2 or 4')
         self.logtemp = []
         self.img_num +=1
         n = nlst[self.img_num]
@@ -64,10 +79,10 @@ class align():
     
         vis_dy = vis_G[0].mean(axis=2)
         vis_dx = vis_G[1].mean(axis=2)
-        vis_r = np.sqrt(vis_dx*vis_dx + vis_dy*vis_dy)
+        vis_r = vis_dx*vis_dx + vis_dy*vis_dy
         ir_dy = ir_G[0]
         ir_dx = ir_G[1]
-        ir_r = np.sqrt(ir_dx*ir_dx + ir_dy*ir_dy)
+        ir_r = ir_dx*ir_dx + ir_dy*ir_dy
     
         vis_g = gaussian_filter(vis_r, 1.5)
         ir_g = gaussian_filter(ir_r, 1)
@@ -87,16 +102,17 @@ class align():
             linex = range(-5,40)
         else:
             linex = range(-5,20)
-        self.logtemp.append(lmax)
+        self.logtemp.append(lmax - 5)
+        self.yshiftNpix = lmax - 5
         # subplot(223)
-        vis_gnorm_crop = self.vis_gnorm[35+lmax:35+lmax+240, 53:53+320]
+        '''vis_gnorm_crop = self.vis_gnorm[35+lmax:35+lmax+240, 53:53+320]
         grad_img = np.stack((vis_gnorm_crop,self.ir_gnorm,vis_gnorm_crop), axis=2)
         grad_show.clear()
         grad_show.imshow(grad_img)
         # subplot(221)
         vis_crop = self.vis_img[35+lmax:35+lmax+240, 53:53+320]/255.0
         vis_show.clear()
-        vis_show.imshow(vis_crop)
+        vis_show.imshow(vis_crop)'''
         # subplot(222)
         ir_show.clear()
         ir_show.imshow(ir_img)
@@ -104,7 +120,10 @@ class align():
         line.clear()
         line.plot(linex, l25)
         plt.draw()
-        show_l = lnpixel / (lmax - 5)
+        try:
+            show_l = lnpixel / (lmax - 5)
+        except ZeroDivisionError:
+            show_l = float('inf')
         namebox.set_val("FLIR%d"%n)
         yshift.set_val(lmax - 5)
         ym.set_val('%.2fm'%show_l)
@@ -118,9 +137,23 @@ class align():
         self.next_img()
         
     def change_value_click(self, event):
-        self.logtemp.append('change value')
+        self.logtemp.append('change')
         self.logtemp.append(self.yshiftNpix)
+        self.logtemp.append(self.xshiftNpix)
         self.next_img()
+        
+    def update_show(self):
+        n35 = self.yshiftNpix + 5
+        xsp = self.xshiftNpix
+        
+        vis_crop = self.vis_img[35+n35:35+n35+240, 53+xsp:53+xsp+320]/255.0
+        vis_show.clear()
+        vis_show.imshow(vis_crop)
+        
+        vis_gnorm_crop = self.vis_gnorm[35+n35:35+n35+240, 53+xsp:53+xsp+320]
+        grad_img = np.stack((vis_gnorm_crop,self.ir_gnorm,vis_gnorm_crop), axis=2)
+        grad_show.clear()
+        grad_show.imshow(grad_img)
     
     def submit_y(self, text):
         try:
@@ -128,19 +161,22 @@ class align():
         except ValueError:
             print("text can't to int")
         else:
-            n35 = self.yshiftNpix + 5
+            self.update_show()
+            try:
+                show_l = lnpixel / self.yshiftNpix
+            except ZeroDivisionError:
+                show_l = float('inf')
+            ym.set_val('%.2fm'%show_l)
             
-            vis_crop = self.vis_img[35+n35:35+n35+240, 53:53+320]/255.0
-            vis_show.clear()
-            vis_show.imshow(vis_crop)
-            
-            vis_gnorm_crop = self.vis_gnorm[35+n35:35+n35+240, 53:53+320]
-            grad_img = np.stack((vis_gnorm_crop,self.ir_gnorm,vis_gnorm_crop), axis=2)
-            grad_show.clear()
-            grad_show.imshow(grad_img)
-            
+    def submit_x(self, text):
+        try:
+            self.xshiftNpix = int(text)
+        except ValueError:
+            print("text can't to int")
+        else:
+            self.update_show()
         
-aligner  = align()
+aligner  = align(args.out)
 vis_show = plt.subplot(221)
 ir_show = plt.subplot(222)
 grad_show = plt.subplot(223)
@@ -166,6 +202,13 @@ yshift_submit =  yshift.on_submit(aligner.submit_y)
 
 ym_ax = plt.axes([0.11, 0.01, 0.04, 0.02])
 ym = widgets.TextBox(ym_ax, '', 'x.xxm')
+
+xshiftbox_ax = plt.axes([0.08, 0.05, 0.02, 0.02])
+xshift = widgets.TextBox(xshiftbox_ax, '', 'xx')
+xshift_submit =  xshift.on_submit(aligner.submit_x)
+
+xm_ax = plt.axes([0.11, 0.05, 0.04, 0.02])
+xm = widgets.TextBox(xm_ax, '', 'x.xxm')
 
 aligner.next_img()
 plt.show()
