@@ -19,6 +19,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--vis", help="visible image dir")
 parser.add_argument("-i", "--ir", help="IR image dir")
 parser.add_argument("-o", "--out", help="output file")
+parser.add_argument("-s", "--start", help="start of file name",
+                    type=int, default=-1)
 args = parser.parse_args()
 
 vis_base=args.vis
@@ -38,12 +40,14 @@ l45m: shape(nimage, 20)
 logtemp: [RAWlargmax, 'str', yshift, xshift]
 '''
 class align():
-    def __init__(self, file):
+    def __init__(self, filename, start_num):
         timestruct = time.localtime()
         strtime = time.strftime('%Y-%m-%d %H:%M:%S', timestruct)
-        self.outf = open(file, 'a')
+        self.outfn = filename
+        self.outf = open(self.outfn, 'a')
         self.outf.write('-----'+strtime+'-----\n')
-        self.img_num = -1
+        self.outf.close()
+        self.img_num = start_num
         self.l25m = []
         self.l45mn = []
         self.l45m = []
@@ -54,6 +58,7 @@ class align():
     def next_img(self):
         self.yshiftNpix = None
         self.xshiftNpix = 0
+        self.outf = open(self.outfn, 'a')
         self.outf.write('FLIR%d'%(nlst[self.img_num]))
         if len(self.logtemp) == 2:
             self.outf.write(' %2d %8s\n'%tuple(self.logtemp))
@@ -63,6 +68,7 @@ class align():
             pass
         else:
             raise ValueError('len logtemp not 2 or 4')
+        self.outf.close()
         self.logtemp = []
         self.img_num +=1
         n = nlst[self.img_num]
@@ -74,17 +80,17 @@ class align():
         self.vis_img = np.array(vis_img).astype(np.float32)
         ir_img = np.array(Image.open(ir_name)).astype(np.float32)
         
-        vis_G = np.gradient(vis_img, axis=(0,1))
+        vis_G = np.gradient(gaussian_filter(self.vis_img, 1), axis=(0,1))
         ir_G = np.gradient(ir_img, axis=(0,1))
     
         vis_dy = vis_G[0].mean(axis=2)
         vis_dx = vis_G[1].mean(axis=2)
-        vis_r = vis_dx*vis_dx + vis_dy*vis_dy
+        vis_r = np.sqrt(vis_dx*vis_dx + vis_dy*vis_dy)
         ir_dy = ir_G[0]
         ir_dx = ir_G[1]
-        ir_r = ir_dx*ir_dx + ir_dy*ir_dy
+        ir_r = np.sqrt(ir_dx*ir_dx + ir_dy*ir_dy)
     
-        vis_g = gaussian_filter(vis_r, 1.5)
+        vis_g = gaussian_filter(vis_r, 1)
         ir_g = gaussian_filter(ir_r, 1)
         self.vis_gnorm = vis_g/np.percentile(vis_g,99)
         self.ir_gnorm = ir_g/np.percentile(ir_g,99)
@@ -102,8 +108,12 @@ class align():
             linex = range(-5,40)
         else:
             linex = range(-5,20)
-        self.logtemp.append(lmax - 5)
-        self.yshiftNpix = lmax - 5
+        self.logtemp.append(lmax - 5)        
+        if(self.yshiftNpix == lmax - 5):
+            self.update_show()
+        else:
+            self.yshiftNpix = lmax - 5
+            yshift.set_val(lmax - 5)
         # subplot(223)
         '''vis_gnorm_crop = self.vis_gnorm[35+lmax:35+lmax+240, 53:53+320]
         grad_img = np.stack((vis_gnorm_crop,self.ir_gnorm,vis_gnorm_crop), axis=2)
@@ -125,7 +135,6 @@ class align():
         except ZeroDivisionError:
             show_l = float('inf')
         namebox.set_val("FLIR%d"%n)
-        yshift.set_val(lmax - 5)
         ym.set_val('%.2fm'%show_l)
     
     def pass_click(self, event):
@@ -175,8 +184,12 @@ class align():
             print("text can't to int")
         else:
             self.update_show()
-        
-aligner  = align(args.out)
+
+if args.start is None:
+    start_num = -1
+else:
+    start_num = np.where(np.array(nlst) == args.start)[0][0]
+aligner  = align(args.out, start_num)
 vis_show = plt.subplot(221)
 ir_show = plt.subplot(222)
 grad_show = plt.subplot(223)
