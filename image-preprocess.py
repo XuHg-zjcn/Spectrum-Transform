@@ -20,7 +20,7 @@ parser.add_argument("-v", "--vis", help="visible image dir")
 parser.add_argument("-i", "--ir", help="IR image dir")
 parser.add_argument("-o", "--out", help="output file")
 parser.add_argument("-s", "--start", help="start of file name",
-                    type=int, default=-1)
+                    type=int)
 args = parser.parse_args()
 
 vis_base=args.vis
