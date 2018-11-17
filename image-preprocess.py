@@ -115,7 +115,7 @@ class align():
         vis_norm_crop = self.vis_norm[40+self.yshiftNpix:
                                       40+self.yshiftNpix+240, 
                                       53+self.xshiftNpix:
-                                      53++self.xshiftNpix+320]
+                                      53+self.xshiftNpix+320]
         grad_img = np.stack((vis_norm_crop,self.ir_norm,vis_norm_crop), axis=2)
         grad_show.clear()
         grad_show.imshow(grad_img)
@@ -123,7 +123,7 @@ class align():
         vis_crop = self.vis_img[40+self.yshiftNpix:
                                 40+self.yshiftNpix+240, 
                                 53+self.xshiftNpix:
-                                53++self.xshiftNpix+320]/255.0
+                                53+self.xshiftNpix+320]/255.0
         vis_show.clear()
         vis_show.imshow(vis_crop)
         # subplot(222)
