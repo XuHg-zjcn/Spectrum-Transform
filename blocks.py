@@ -40,7 +40,7 @@ class layer_num(object):
 def layer1x1(input_tensor, num_outputs, is_training, 
              activation_fn=tf.nn.relu, normalizer_fn=slim.batch_norm):
     with tf.variable_scope('1x1'):
-        net = slim.dropout(input_tensor, scope='Dropout', is_training=is_training)
+        net = slim.dropout(input_tensor, 0.5, scope='Dropout', is_training=is_training)
         net = slim.conv2d(
             net, num_outputs, [1, 1], stride=1, padding='VALID', 
             activation_fn=activation_fn,
@@ -184,7 +184,7 @@ def den_net(input_tensor):
         with slim.arg_scope([slim.conv2d, slim.separable_conv2d], 
                             padding='SAME', 
                             activation_fn=tf.nn.relu6, 
-                            normalizer_fn=None,
+                            normalizer_fn=slim.batch_norm,
                             trainable=True):
             net = tf.identity(input_tensor, name='input')
             net=slim.conv2d(net, 16, [3,3], stride=2)
@@ -237,6 +237,7 @@ def den_out(input_list1,input_list2):
             net = slim.avg_pool2d(net, [patch, patch], stride=1, padding='VALID')
             net = tf.identity(net, name='output')
             net = layer1x1(net, 1, is_training=True, 
-                           activation_fn=tf.nn.relu, normalizer_fn=None)
+                           activation_fn=tf.nn.sigmoid, normalizer_fn=slim.batch_norm)
         lo += net
+    lo = tf.reshape(lo, [])
     return lo
