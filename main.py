@@ -70,6 +70,7 @@ with slim.arg_scope([slim.conv2d, slim.conv2d_transpose, slim.fully_connected, s
     tf.summary.histogram('grad',grad)
     grad_norm = tf.reduce_sum((grad)**2, axis=(1, 2, 3))
     grad_pen = 10 * tf.reduce_mean(tf.nn.relu(grad_norm - 1.), name='grad_pen')
+    print(grad_norm.shape)
     tf.summary.histogram('grad_norm',grad_norm)
     tf.summary.scalar('grad_pen',grad_pen)
     

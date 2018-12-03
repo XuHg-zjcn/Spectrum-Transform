@@ -225,8 +225,9 @@ def den_out(input_list1,input_list2):
     for i in range(inlen):
         with tf.variable_scope('in_%d'%counterA.get):
             counterN = layer_num()
-            net = tf.abs(input_list1[i] - input_list2[i])
-            dchs = net.get_shape().as_list()[3]
+            dchs = input_list1[i].get_shape().as_list()[3]
+            
+            net = input_list1[i]
             if(dchs>7):
                 net = den_block(net, dchs, counterN, stride=2, mul=6)
             net = den_block(net, dchs, counterN, stride=1, mul=6)
@@ -235,9 +236,19 @@ def den_out(input_list1,input_list2):
             assert net.get_shape().as_list()[1] == net.get_shape().as_list()[2]
             patch = net.get_shape().as_list()[1]
             net = slim.avg_pool2d(net, [patch, patch], stride=1, padding='VALID')
-            net = tf.identity(net, name='output')
-            net = layer1x1(net, 1, is_training=True, 
-                           activation_fn=tf.nn.sigmoid, normalizer_fn=slim.batch_norm)
-        lo += net
+            net1 = tf.identity(net, name='output1')
+            
+            net = input_list2[i]
+            if(dchs>7):
+                net = den_block(net, dchs, counterN, stride=2, mul=6)
+            net = den_block(net, dchs, counterN, stride=1, mul=6)
+            net = den_block(net, dchs, counterN, stride=1, mul=6)
+            net = den_block(net, dchs*2, counterN, stride=1, mul=6)
+            assert net.get_shape().as_list()[1] == net.get_shape().as_list()[2]
+            patch = net.get_shape().as_list()[1]
+            net = slim.avg_pool2d(net, [patch, patch], stride=1, padding='VALID')
+            net2 = tf.identity(net, name='output2')
+
+        lo += tf.reduce_mean((net2 - net1)**2)
     lo = tf.reshape(lo, [])
     return lo
