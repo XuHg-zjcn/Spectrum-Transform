@@ -55,20 +55,21 @@ def D(input_tensor1, input_tensor2):
 
 # get the variables list is empty
 # copy from https://github.com/bojone/gan/blob/master/mnist_gangp.py
-real_IR = tf.placeholder(tf.float32, shape=[1, 224, 224, 1])
-Vis = tf.placeholder(tf.float32, shape=[1, 224, 224, 3])
+real_IR = tf.placeholder(tf.float32, shape=[None, 224, 224, 1])
+Vis = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
 weight_intitializer = tf.truncated_normal_initializer(stddev=1.0)
 with slim.arg_scope([slim.conv2d, slim.conv2d_transpose, slim.fully_connected, slim.separable_conv2d],
                     weights_initializer=weight_intitializer):
     gen_IR = G(Vis)
+    
     tf.summary.histogram('gen_IR',gen_IR)
     tf.summary.histogram('Vis',Vis)
-    eps = tf.random_uniform([1, 224, 224, 1], minval=0., maxval=1.)
+    eps = tf.random_uniform([64, 224, 224, 1], minval=0., maxval=1.)
     X_inter = tf.add(eps*real_IR, (1. - eps)*gen_IR, name='X_inter')
     grad = tf.gradients(D(X_inter, real_IR), [X_inter])[0]
     
     tf.summary.histogram('grad',grad)
-    grad_norm = tf.reduce_sum((grad)**2, axis=(1, 2, 3))
+    grad_norm = tf.sqrt(tf.reduce_sum((grad)**2, axis=(1, 2, 3)) + 1e-8)
     grad_pen = 10 * tf.reduce_mean(tf.nn.relu(grad_norm - 1.), name='grad_pen')
     print(grad_norm.shape)
     tf.summary.histogram('grad_norm',grad_norm)
@@ -90,7 +91,7 @@ G_mbnet2_varlist = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='G/
 G_solver = tf.train.AdamOptimizer(1e-3, name='Adam_G').minimize(G_loss, var_list=G_variables)
 D_solver = tf.train.AdamOptimizer(1e-3, name='Adam_D').minimize(D_loss, var_list=D_variables)
 #op = tf.train.AdamOptimizer(1e-4).minimize(loss)
-tfrecords_filename = './TFRecords1/'
+tfrecords_filename = './TFRecords2/'
 filename_queue = tf.train.string_input_producer([tfrecords_filename],)
 reader = tf.TFRecordReader()
 _, serialized_example = reader.read(filename_queue)
@@ -106,7 +107,7 @@ IR_image = tf.reshape(IR_image, [240, 320, 1])
 #print(IR_image.shape)
 Vis_image = tf.random_crop(Vis_image, (224, 224, 3), seed=12345678)
 IR_image = tf.random_crop(IR_image, (224, 224, 1), seed=12345678)
-Vis_image, IR_image = tf.train.shuffle_batch([Vis_image, IR_image], num_threads=2, batch_size=1, capacity=2000,
+Vis_image, IR_image = tf.train.shuffle_batch([Vis_image, IR_image], num_threads=2, batch_size=64, capacity=2000,
                                                 min_after_dequeue=1000)
     
 saver = tf.train.Saver(max_to_keep=20)

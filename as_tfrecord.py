@@ -28,7 +28,7 @@ f = open('outr.txt')
 ir_base="../../TT/hres_tir"
 vis_base="../../TT/hres_vis"
 
-writer = tf.python_io.TFRecordWriter('./TFRecords1/')
+writer = tf.python_io.TFRecordWriter('./TFRecords2/')
 Np=0
 Nnp=0
 Nerr=0
@@ -54,10 +54,10 @@ for i in f:
                           40+yshiftNpix+240, 
                           53+xshiftNpix:
                           53+xshiftNpix+320]
-        print(vis_img.shape)
+        #print(vis_img.shape)
         vis_img = vis_img.tobytes()
         ir_img = np.array(Image.open(ir_name)).astype(np.uint16)
-        print(ir_img.shape)
+        #print(ir_img.shape)
         ir_img = ir_img.tobytes()
         example=tf.train.Example(features=tf.train.Features(feature={
                  'Vis_image':_bytes_feature(vis_img),

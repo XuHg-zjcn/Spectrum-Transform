@@ -38,7 +38,7 @@ class layer_num(object):
         self.__num = 0
 
 def layer1x1(input_tensor, num_outputs, is_training, 
-             activation_fn=tf.nn.relu, normalizer_fn=slim.batch_norm):
+             activation_fn=tf.nn.leaky_relu, normalizer_fn=slim.batch_norm):
     with tf.variable_scope('1x1'):
         net = slim.dropout(input_tensor, 0.5, scope='Dropout', is_training=is_training)
         net = slim.conv2d(
@@ -124,7 +124,7 @@ def gen_transpose(input_tensor, mbnet2):
     with tf.variable_scope('transpose'):
         with slim.arg_scope([slim.conv2d, slim.conv2d_transpose, slim.separable_conv2d], 
                             padding='SAME', 
-                            activation_fn=tf.nn.relu6, 
+                            activation_fn=tf.nn.leaky_relu, 
                             normalizer_fn=slim.batch_norm,
                             trainable=True):
             net =tf.identity(input_tensor, name='intput')
@@ -183,7 +183,7 @@ def den_net(input_tensor):
     with tf.variable_scope('den_net'):
         with slim.arg_scope([slim.conv2d, slim.separable_conv2d], 
                             padding='SAME', 
-                            activation_fn=tf.nn.relu6, 
+                            activation_fn=tf.nn.leaky_relu, 
                             normalizer_fn=slim.batch_norm,
                             trainable=True):
             net = tf.identity(input_tensor, name='input')
@@ -249,6 +249,6 @@ def den_out(input_list1,input_list2):
             net = slim.avg_pool2d(net, [patch, patch], stride=1, padding='VALID')
             net2 = tf.identity(net, name='output2')
 
-        lo += tf.reduce_mean((net2 - net1)**2)
+        lo += tf.sqrt(tf.reduce_mean((net2 - net1)**2) + 1e-8)
     lo = tf.reshape(lo, [])
     return lo
