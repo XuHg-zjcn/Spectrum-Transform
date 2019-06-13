@@ -18,14 +18,24 @@
 import os
 import imageio
 import png
+from PIL import Image
 root="./hres_img"
 n=0
 for i in os.listdir(root):
-  if(i[-4:]=='.jpg' and i[:4]=='FLIR' and int(i[4:-4])>9614):
+  raw_add = os.path.join(root,i)
+  ImSize=Image.open(raw_add).size
+  if ImSize == (320,240):
+    im2 = True
+  elif ImSize == (640,480):
+    im2 = False
+  else:
+    raise ValueError
+  print(raw_add, im2)
+  if i[-4:]=='.jpg' and i[:4]=='FLIR' and im2:
     n+=1
-    os.system("exiftool -b -RawThermalImage %s > ./temp/tir.png"%(os.path.join(root,i)))
+    os.system("exiftool -b -RawThermalImage %s > ./temp/tir.png"%raw_add)
     im=imageio.imread('./temp/tir.png')
     im=im*256+(im//256.0).astype(int)
     png.from_array(im, 'L;16').save('./hres_tir/%s.png'%(i[:-4]))
-    os.system("exiftool -b -EmbeddedImage %s > ./hres_vis/%s"%(os.path.join(root,i),i))
+    os.system("exiftool -b -EmbeddedImage %s > ./hres_vis/%s.jpg"%(raw_add,i[:-4]))
 print('{} images'.format(n))
