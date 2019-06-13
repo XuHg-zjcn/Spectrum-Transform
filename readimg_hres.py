@@ -18,9 +18,11 @@
 import os
 import imageio
 import png
+import numpy as np
 from PIL import Image
 root="./hres_img"
 n=0
+nlst=[]
 for i in os.listdir(root):
   raw_add = os.path.join(root,i)
   ImSize=Image.open(raw_add).size
@@ -38,4 +40,7 @@ for i in os.listdir(root):
     im=im*256+(im//256.0).astype(int)
     png.from_array(im, 'L;16').save('./hres_tir/%s.png'%(i[:-4]))
     os.system("exiftool -b -EmbeddedImage %s > ./hres_vis/%s.jpg"%(raw_add,i[:-4]))
+    nlst.append(int(i[4:-4]))
+print(nlst)
+np.save('nlst.npy',nlst)
 print('{} images'.format(n))
